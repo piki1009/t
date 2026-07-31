@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>하루 일과 - 귀여운 루틴 달력</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Cute Korean Fonts (Jua & Gowun Dodum) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Jua&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti for Completion celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        pink: {
+                            50: '#fff0f5',
+                            100: '#ffe4e9',
+                            200: '#fcc2d0',
+                            300: '#faa2b8',
+                            400: '#f77395',
+                            500: '#f04374',
+                            600: '#de285a',
+                        },
+                        strawberry: '#ff758f',
+                        cream: '#fff9fa'
+                    },
+                    fontFamily: {
+                        jua: ['Jua', 'sans-serif'],
+                        gowun: ['Gowun Dodum', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Gowun Dodum', sans-serif;
+            background-color: #fff0f5;
+            background-image: radial-gradient(#fcc2d0 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+
+        .title-font {
+            font-family: 'Jua', sans-serif;
+        }
+
+        /* Bounce and Floating Animations for Character */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-8px) rotate(2deg); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes wiggle {
+            0%, 100% { transform: rotate(-3deg); }
+            50% { transform: rotate(3deg); }
+        }
+        .animate-wiggle {
+            animation: wiggle 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            80% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #ffe4e9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f77395;
+            border-radius: 10px;
+        }
+
+        /* Custom Checkbox styles */
+        .cute-checkbox:checked + label .check-icon {
+            display: flex;
+        }
+        .cute-checkbox:checked + label {
+            color: #b3b3b3;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12 text-slate-700">
+
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b-4 border-pink-200 shadow-sm">
+        <div class="max-w-md md:max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-pink-100 border-2 border-pink-300 rounded-2xl flex items-center justify-center text-2xl shadow-inner animate-float">
+                    🐰
+                </div>
+                <div>
+                    <h1 class="title-font text-2xl md:text-3xl text-pink-500 tracking-wide flex items-center gap-2">
+                        하루 일과 <span class="text-xs bg-pink-200 text-pink-700 font-normal px-2 py-0.5 rounded-full">루틴 체크</span>
+                    </h1>
+                    <p class="text-xs text-pink-400 font-medium">매일매일 쑥쑥 자라는 나의 습관! ✨</p>
+                </div>
+            </div>
+            <button onclick="resetTodayRoutines()" title="오늘의 기본 루틴 다시 불러오기" class="text-xs bg-pink-100 hover:bg-pink-200 text-pink-600 px-3 py-2 rounded-xl transition flex items-center gap-1 font-bold">
+                <i class="fa-solid fa-rotate-right"></i> 초기화
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-md md:max-w-2xl mx-auto px-4 pt-4 space-y-4">
+
+        <!-- Character Mascot & Encouragement Speech Bubble -->
+        <section class="bg-white rounded-3xl p-4 border-2 border-pink-200 shadow-md flex items-center gap-4 relative overflow-hidden">
+            <div class="absolute -right-4 -bottom-4 text-pink-50 opacity-40 text-8xl pointer-events-none">
+                <i class="fa-solid fa-heart"></i>
+            </div>
+            
+            <div id="characterAvatar" class="relative text-5xl bg-pink-100 p-3 rounded-2xl border-2 border-pink-300 shadow-sm flex-shrink-0 animate-wiggle">
+                🐰
+            </div>
+
+            <div class="flex-1">
+                <div class="relative bg-pink-50 border-2 border-pink-200 rounded-2xl p-3 text-sm md:text-base font-semibold text-pink-600">
+                    <!-- Speech bubble pointer -->
+                    <div class="absolute top-1/2 -left-2 transform -translate-y-1/2 w-0 h-0 border-t-8 border-t-transparent border-r-8 border-r-pink-200 border-b-8 border-b-transparent"></div>
+                    <p id="encouragementMsg" class="title-font tracking-wide">
+                        오늘도 차근차근 일과를 해내볼까? 파이팅! 💖
+                    </p>
+                </div>
+                <div class="mt-2 flex items-center justify-between text-xs font-bold text-pink-400">
+                    <span id="progressText">달성률: 0%</span>
+                    <span id="completedCountText">0/0 완료</span>
+                </div>
+                <!-- Cute Heart Progress Bar -->
+                <div class="w-full bg-pink-100 h-3.5 rounded-full overflow-hidden mt-1 border border-pink-200">
+                    <div id="progressBar" class="bg-gradient-to-r from-pink-300 to-strawberry h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View Switcher (Month vs Week) & Navigation Controls -->
+        <section class="bg-white rounded-3xl p-4 border-2 border-pink-200 shadow-md">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <!-- Month / Week Toggle Buttons -->
+                <div class="bg-pink-100 p-1 rounded-2xl flex text-xs md:text-sm font-bold title-font">
+                    <button id="btnMonthView" onclick="switchView('month')" class="px-4 py-1.5 rounded-xl transition-all duration-200 bg-white text-pink-600 shadow-sm">
+                        🗓️ 1달 보기
+                    </button>
+                    <button id="btnWeekView" onclick="switchView('week')" class="px-4 py-1.5 rounded-xl transition-all duration-200 text-pink-400 hover:text-pink-600">
+                        📅 1주 보기
+                    </button>
+                </div>
+
+                <!-- Month/Year Label & Nav -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="navigatePeriod(-1)" class="w-8 h-8 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 flex items-center justify-center transition">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <span id="calendarTitle" class="title-font text-lg md:text-xl text-pink-600 font-bold px-1">
+                        2026년 7월
+                    </span>
+                    <button onclick="navigatePeriod(1)" class="w-8 h-8 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 flex items-center justify-center transition">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                    <button onclick="goToToday()" class="text-xs bg-pink-500 hover:bg-pink-600 text-white font-bold px-3 py-1.5 rounded-xl shadow transition">
+                        오늘
+                    </button>
+                </div>
+            </div>
+
+            <!-- Calendar Display Area -->
+            <!-- Month View Container -->
+            <div id="monthViewContainer" class="block">
+                <!-- Day names header -->
+                <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs text-pink-400 py-1 mb-1 border-b border-pink-100">
+                    <span class="text-red-400">일</span>
+                    <span>월</span>
+                    <span>화</span>
+                    <span>수</span>
+                    <span>목</span>
+                    <span>금</span>
+                    <span class="text-blue-400">토</span>
+                </div>
+                <!-- Days grid -->
+                <div id="monthGrid" class="grid grid-cols-7 gap-1 text-center text-sm font-bold">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Week View Container -->
+            <div id="weekViewContainer" class="hidden">
+                <div id="weekGrid" class="grid grid-cols-7 gap-1 text-center text-sm font-bold pt-2">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Selected Date Routine Checklist -->
+        <section class="bg-white rounded-3xl p-5 border-2 border-pink-200 shadow-md space-y-4">
+            
+            <div class="flex items-center justify-between border-b-2 border-pink-100 pb-3">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🎀</span>
+                    <div>
+                        <h2 id="selectedDateText" class="title-font text-lg md:text-xl text-pink-600">
+                            오늘의 루틴
+                        </h2>
+                        <p class="text-xs text-slate-400">하나씩 체크하며 기분 좋은 하루 완성!</p>
+                    </div>
+                </div>
+                <!-- Quick add presets -->
+                <button onclick="togglePresetMenu()" class="text-xs bg-pink-100 hover:bg-pink-200 text-pink-600 px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 추천 루틴
+                </button>
+            </div>
+
+            <!-- Preset Routine Quick Addition Menu -->
+            <div id="presetMenu" class="hidden bg-pink-50 p-3 rounded-2xl border border-pink-200 space-y-2 animate-pop">
+                <div class="text-xs font-bold text-pink-500 mb-1">✨ 클릭해서 빠르게 추가해보세요!</div>
+                <div class="flex flex-wrap gap-1.5">
+                    <button onclick="addPresetRoutine('아침에 세수하고 양치하기 🧼')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">🧼 세수/양치하기</button>
+                    <button onclick="addPresetRoutine('스스로 이부자리 정리하기 🛏️')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">🛏️ 이부자리 정리</button>
+                    <button onclick="addPresetRoutine('학교 숙제 완벽히 끝내기 ✏️')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">✏️ 학교 숙제하기</button>
+                    <button onclick="addPresetRoutine('책 20분 동안 재미있게 읽기 📚')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">📚 책 20분 읽기</button>
+                    <button onclick="addPresetRoutine('오늘 하루 느낀점 일기 쓰기 📝')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">📝 일기 쓰기</button>
+                    <button onclick="addPresetRoutine('내일 학교 가방 챙기기 🎒')" class="text-xs bg-white border border-pink-200 hover:bg-pink-100 text-pink-600 px-2.5 py-1 rounded-full font-medium transition">🎒 내일 가방 챙기기</button>
+                </div>
+            </div>
+
+            <!-- Add Routine Form -->
+            <form onsubmit="handleAddRoutine(event)" class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="newRoutineInput" 
+                    placeholder="새로운 할 일을 적어보세요! (예: 강아지 산책하기)" 
+                    class="flex-1 bg-pink-50 border-2 border-pink-200 focus:border-pink-400 focus:bg-white rounded-2xl px-4 py-2.5 text-sm outline-none transition text-slate-700 placeholder-pink-300 font-medium"
+                    maxlength="40"
+                />
+                <button 
+                    type="submit" 
+                    class="bg-pink-500 hover:bg-pink-600 active:scale-95 text-white font-bold px-5 py-2.5 rounded-2xl shadow-sm transition title-font flex items-center gap-1 text-sm shrink-0"
+                >
+                    <i class="fa-solid fa-plus"></i> 추가
+                </button>
+            </form>
+
+            <!-- Routine Items List -->
+            <div id="routineList" class="space-y-2.5 pt-2">
+                <!-- Dynamic Items Inserted Here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-8 space-y-2">
+                <div class="text-4xl">🌸</div>
+                <p class="text-sm font-bold text-pink-400">아직 등록된 루틴이 없어요!</p>
+                <p class="text-xs text-slate-400">위 입력을 통해 오늘 꼭 할 일을 추가해 보세요.</p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-8 text-center text-xs text-pink-400 font-medium">
+        <p>🌸 매일매일 행복한 루틴 습관 | 하루 일과 🌸</p>
+    </footer>
+
+    <script>
+        // State management
+        const STORAGE_KEY = 'cute_daily_routine_app_data_v1';
+        
+        let currentView = 'month'; // 'month' or 'week'
+        let selectedDate = new Date(); // Current chosen active day
+        let displayedDate = new Date(); // Date reference for viewing month/week navigation
+
+        // Default routine presets if date has no records
+        const DEFAULT_ROUTINES = [
+            "아침 기상 및 이부자리 정리 🛏️",
+            "세수하고 양치하기 🧼",
+            "학교 숙제 모두 끝내기 ✏️",
+            "책 20분 동안 읽기 📚",
+            "내일 가방과 준비물 챙기기 🎒"
+        ];
+
+        // Character Encouragement messages based on percentage
+        const CHARACTER_SPEECHES = {
+            0: "오늘 일과를 시작해볼까? 파이팅! 🐰💖",
+            25: "좋은 출발이야! 차근차근 해보자! 🌸",
+            50: "벌써 절반이나 했어! 진짜 대단해! ✨",
+            75: "거의 다 왔어! 조금만 더 힘내! 🔥",
+            100: "우와아!! 오늘 일과 100% 완전 성공! 🎉🌟"
+        };
+
+        const AVATARS = {
+            0: "🐰",
+            25: "🐣",
+            50: "🐻",
+            75: "🦊",
+            100: "👑"
+        };
+
+        // Date Helpers
+        function formatDateKey(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function isSameDay(d1, d2) {
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
+        }
+
+        // Local Storage Helpers
+        function getAllData() {
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY);
+                return stored ? JSON.parse(stored) : {};
+            } catch (e) {
+                console.error("Storage error", e);
+                return {};
+            }
+        }
+
+        function getRoutinesForDate(dateStr) {
+            const data = getAllData();
+            if (!data[dateStr]) {
+                // Initialize default routines for new days
+                data[dateStr] = DEFAULT_ROUTINES.map(title => ({
+                    id: 'rt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    title: title,
+                    completed: false
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            }
+            return data[dateStr];
+        }
+
+        function saveRoutinesForDate(dateStr, routines) {
+            const data = getAllData();
+            data[dateStr] = routines;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
+        // App Initialization
+        window.onload = function() {
+            renderCalendar();
+            renderRoutines();
+        };
+
+        // Switch View (Month / Week)
+        function switchView(view) {
+            currentView = view;
+            const btnMonth = document.getElementById('btnMonthView');
+            const btnWeek = document.getElementById('btnWeekView');
+            const monthContainer = document.getElementById('monthViewContainer');
+            const weekContainer = document.getElementById('weekViewContainer');
+
+            if (view === 'month') {
+                btnMonth.className = "px-4 py-1.5 rounded-xl transition-all duration-200 bg-white text-pink-600 shadow-sm";
+                btnWeek.className = "px-4 py-1.5 rounded-xl transition-all duration-200 text-pink-400 hover:text-pink-600";
+                monthContainer.classList.remove('hidden');
+                weekContainer.classList.add('hidden');
+            } else {
+                btnWeek.className = "px-4 py-1.5 rounded-xl transition-all duration-200 bg-white text-pink-600 shadow-sm";
+                btnMonth.className = "px-4 py-1.5 rounded-xl transition-all duration-200 text-pink-400 hover:text-pink-600";
+                weekContainer.classList.remove('hidden');
+                monthContainer.classList.add('hidden');
+            }
+            renderCalendar();
+        }
+
+        // Navigate Month or Week
+        function navigatePeriod(direction) {
+            if (currentView === 'month') {
+                displayedDate.setMonth(displayedDate.getMonth() + direction);
+            } else {
+                displayedDate.setDate(displayedDate.getDate() + (direction * 7));
+            }
+            renderCalendar();
+        }
+
+        function goToToday() {
+            selectedDate = new Date();
+            displayedDate = new Date();
+            renderCalendar();
+            renderRoutines();
+        }
+
+        function renderCalendar() {
+            const calendarTitle = document.getElementById('calendarTitle');
+            const year = displayedDate.getFullYear();
+            const month = displayedDate.getMonth();
+
+            if (currentView === 'month') {
+                calendarTitle.innerText = `${year}년 ${month + 1}월`;
+                renderMonthGrid(year, month);
+            } else {
+                // Week Title range
+                const startOfWeek = getStartOfWeek(displayedDate);
+                const endOfWeek = new Date(startOfWeek);
+                endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+                const startM = startOfWeek.getMonth() + 1;
+                const endM = endOfWeek.getMonth() + 1;
+
+                if (startM === endM) {
+                    calendarTitle.innerText = `${year}년 ${startM}월 (주간)`;
+                } else {
+                    calendarTitle.innerText = `${startM}월 ~ ${endM}월 (주간)`;
+                }
+                renderWeekGrid(startOfWeek);
+            }
+        }
+
+        function getStartOfWeek(d) {
+            const date = new Date(d);
+            const day = date.getDay(); // 0 is Sunday
+            const diff = date.getDate() - day;
+            return new Date(date.setDate(diff));
+        }
+
+        function renderMonthGrid(year, month) {
+            const grid = document.getElementById('monthGrid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+
+            // Empty cells for alignment
+            for (let i = 0; i < firstDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = "h-10 md:h-12 border border-transparent";
+                grid.appendChild(emptyCell);
+            }
+
+            const data = getAllData();
+
+            // Day cells
+            for (let day = 1; day <= lastDate; day++) {
+                const cellDate = new Date(year, month, day);
+                const dateStr = formatDateKey(cellDate);
+                const isSelected = isSameDay(cellDate, selectedDate);
+                const isTodayDate = isSameDay(cellDate, today);
+
+                const cell = document.createElement('button');
+                cell.onclick = () => selectDate(cellDate);
+
+                let cellStyle = "h-10 md:h-12 rounded-2xl flex flex-col items-center justify-center relative transition-all duration-150 p-1 ";
+
+                if (isSelected) {
+                    cellStyle += "bg-pink-500 text-white shadow-md scale-105 z-10 font-bold ";
+                } else if (isTodayDate) {
+                    cellStyle += "bg-pink-100 text-pink-600 border-2 border-pink-400 font-bold ";
+                } else {
+                    cellStyle += "bg-pink-50/60 hover:bg-pink-100 text-slate-700 font-medium ";
+                }
+
+                // Sunday / Saturday coloring when not selected
+                if (!isSelected) {
+                    const dayOfWeek = cellDate.getDay();
+                    if (dayOfWeek === 0) cellStyle += "text-red-500 ";
+                    if (dayOfWeek === 6) cellStyle += "text-blue-500 ";
+                }
+
+                cell.className = cellStyle;
+
+                // Day number
+                const numSpan = document.createElement('span');
+                numSpan.innerText = day;
+                cell.appendChild(numSpan);
+
+                // Check completion dot indicator
+                if (data[dateStr] && data[dateStr].length > 0) {
+                    const total = data[dateStr].length;
+                    const done = data[dateStr].filter(r => r.completed).length;
+                    
+                    if (done > 0) {
+                        const dot = document.createElement('span');
+                        if (done === total) {
+                            dot.className = "w-2 h-2 rounded-full bg-yellow-300 border border-pink-400 mt-0.5 animate-pulse";
+                            dot.title = "완전 완료!";
+                        } else {
+                            dot.className = isSelected ? "w-1.5 h-1.5 rounded-full bg-white mt-0.5" : "w-1.5 h-1.5 rounded-full bg-pink-400 mt-0.5";
+                        }
+                        cell.appendChild(dot);
+                    }
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function renderWeekGrid(startOfWeek) {
+            const grid = document.getElementById('weekGrid');
+            grid.innerHTML = '';
+
+            const dayLabels = ['일', '월', '화', '수', '목', '금', '토'];
+            const today = new Date();
+            const data = getAllData();
+
+            for (let i = 0; i < 7; i++) {
+                const cellDate = new Date(startOfWeek);
+                cellDate.setDate(startOfWeek.getDate() + i);
+                
+                const dateStr = formatDateKey(cellDate);
+                const isSelected = isSameDay(cellDate, selectedDate);
+                const isTodayDate = isSameDay(cellDate, today);
+
+                const cell = document.createElement('button');
+                cell.onclick = () => selectDate(cellDate);
+
+                let cellStyle = "py-3 rounded-2xl flex flex-col items-center justify-between border transition-all duration-150 min-h-[70px] ";
+
+                if (isSelected) {
+                    cellStyle += "bg-pink-500 text-white border-pink-500 shadow-md scale-105 z-10 ";
+                } else if (isTodayDate) {
+                    cellStyle += "bg-pink-100 text-pink-600 border-pink-400 ";
+                } else {
+                    cellStyle += "bg-pink-50/70 border-pink-100 hover:bg-pink-100 text-slate-700 ";
+                }
+
+                cell.className = cellStyle;
+
+                // Weekday label
+                const label = document.createElement('span');
+                label.className = "text-xs font-semibold opacity-80";
+                label.innerText = dayLabels[i];
+
+                // Day number
+                const numSpan = document.createElement('span');
+                numSpan.className = "text-base font-bold my-0.5";
+                numSpan.innerText = cellDate.getDate();
+
+                cell.appendChild(label);
+                cell.appendChild(numSpan);
+
+                // Dot indicator
+                if (data[dateStr] && data[dateStr].length > 0) {
+                    const total = data[dateStr].length;
+                    const done = data[dateStr].filter(r => r.completed).length;
+                    
+                    if (done > 0) {
+                        const badge = document.createElement('span');
+                        if (done === total) {
+                            badge.className = "text-[10px] px-1 bg-yellow-300 text-pink-700 rounded-full font-bold";
+                            badge.innerText = "★";
+                        } else {
+                            badge.className = isSelected ? "text-[10px] text-pink-100" : "text-[10px] text-pink-500";
+                            badge.innerText = `${done}/${total}`;
+                        }
+                        cell.appendChild(badge);
+                    }
+                }
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function selectDate(dateObj) {
+            selectedDate = dateObj;
+            renderCalendar();
+            renderRoutines();
+        }
+
+        function renderRoutines() {
+            const dateStr = formatDateKey(selectedDate);
+            const routines = getRoutinesForDate(dateStr);
+
+            // Update Date Header
+            const dateTitle = document.getElementById('selectedDateText');
+            const dayNames = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            const today = new Date();
+            const isToday = isSameDay(selectedDate, today);
+
+            dateTitle.innerText = `${selectedDate.getFullYear()}년 ${selectedDate.getMonth() + 1}월 ${selectedDate.getDate()}일 (${dayNames[selectedDate.getDay()]}) ${isToday ? '✨ 오늘' : ''}`;
+
+            const listContainer = document.getElementById('routineList');
+            const emptyState = document.getElementById('emptyState');
+            listContainer.innerHTML = '';
+
+            if (routines.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            let completedCount = 0;
+
+            routines.forEach((routine, index) => {
+                if (routine.completed) completedCount++;
+
+                const item = document.createElement('div');
+                item.className = "group flex items-center justify-between bg-pink-50/70 hover:bg-pink-100/70 p-3 rounded-2xl border border-pink-200 transition-all duration-200";
+
+                const leftSection = document.createElement('div');
+                leftSection.className = "flex items-center space-x-3 flex-1 min-w-0 pr-2";
+
+                // Unique checkbox ID
+                const checkId = `chk_${routine.id}`;
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = checkId;
+                checkbox.checked = routine.completed;
+                checkbox.className = "hidden cute-checkbox";
+                checkbox.onchange = () => toggleRoutine(routine.id);
+
+                const customCheck = document.createElement('label');
+                customCheck.htmlFor = checkId;
+                customCheck.className = `w-7 h-7 rounded-xl border-2 flex items-center justify-center cursor-pointer transition shrink-0 ${
+                    routine.completed ? 'bg-pink-500 border-pink-500 text-white' : 'bg-white border-pink-300 hover:border-pink-400'
+                }`;
+                
+                customCheck.innerHTML = routine.completed 
+                    ? '<i class="fa-solid fa-heart text-xs animate-pop"></i>' 
+                    : '<i class="fa-regular fa-heart text-xs text-pink-300"></i>';
+
+                const labelText = document.createElement('label');
+                labelText.htmlFor = checkId;
+                labelText.className = `text-sm md:text-base font-semibold cursor-pointer truncate transition-all ${
+                    routine.completed ? 'line-through text-slate-400' : 'text-slate-700'
+                }`;
+                labelText.innerText = routine.title;
+
+                leftSection.appendChild(checkbox);
+                leftSection.appendChild(customCheck);
+                leftSection.appendChild(labelText);
+
+                // Delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.onclick = () => deleteRoutine(routine.id);
+                deleteBtn.className = "text-pink-300 hover:text-red-500 p-1.5 transition rounded-lg hover:bg-white text-xs";
+                deleteBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                deleteBtn.title = '삭제하기';
+
+                item.appendChild(leftSection);
+                item.appendChild(deleteBtn);
+
+                listContainer.appendChild(item);
+            });
+
+            // Calculate progress
+            const total = routines.length;
+            const percentage = total > 0 ? Math.round((completedCount / total) * 100) : 0;
+
+            updateProgressUI(completedCount, total, percentage);
+        }
+
+        function updateProgressUI(completed, total, percentage) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const completedCountText = document.getElementById('completedCountText');
+            const encouragementMsg = document.getElementById('encouragementMsg');
+            const characterAvatar = document.getElementById('characterAvatar');
+
+            progressBar.style.width = `${percentage}%`;
+            progressText.innerText = `달성률: ${percentage}%`;
+            completedCountText.innerText = `${completed}/${total} 완료`;
+
+            // Mascot response
+            let bracket = 0;
+            if (percentage >= 100 && total > 0) bracket = 100;
+            else if (percentage >= 75) bracket = 75;
+            else if (percentage >= 50) bracket = 50;
+            else if (percentage >= 25) bracket = 25;
+
+            encouragementMsg.innerText = CHARACTER_SPEECHES[bracket];
+            characterAvatar.innerText = AVATARS[bracket];
+
+            // Trigger Confetti effect on 100% completion!
+            if (percentage === 100 && total > 0) {
+                triggerConfetti();
+            }
+        }
+
+        function toggleRoutine(id) {
+            const dateStr = formatDateKey(selectedDate);
+            const routines = getRoutinesForDate(dateStr);
+            const target = routines.find(r => r.id === id);
+
+            if (target) {
+                target.completed = !target.completed;
+                saveRoutinesForDate(dateStr, routines);
+                renderRoutines();
+                renderCalendar(); // refresh dot badges
+            }
+        }
+
+        function handleAddRoutine(e) {
+            e.preventDefault();
+            const input = document.getElementById('newRoutineInput');
+            const text = input.value.trim();
+
+            if (!text) return;
+
+            const dateStr = formatDateKey(selectedDate);
+            const routines = getRoutinesForDate(dateStr);
+
+            routines.push({
+                id: 'rt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                title: text,
+                completed: false
+            });
+
+            saveRoutinesForDate(dateStr, routines);
+            input.value = '';
+            renderRoutines();
+            renderCalendar();
+        }
+
+        function addPresetRoutine(title) {
+            const dateStr = formatDateKey(selectedDate);
+            const routines = getRoutinesForDate(dateStr);
+
+            // Avoid duplicate preset title on same day
+            if (routines.some(r => r.title === title)) {
+                alert('이미 등록되어 있는 루틴이에요! 🌸');
+                return;
+            }
+
+            routines.push({
+                id: 'rt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                title: title,
+                completed: false
+            });
+
+            saveRoutinesForDate(dateStr, routines);
+            renderRoutines();
+            renderCalendar();
+        }
+
+        function deleteRoutine(id) {
+            const dateStr = formatDateKey(selectedDate);
+            let routines = getRoutinesForDate(dateStr);
+
+            routines = routines.filter(r => r.id !== id);
+            saveRoutinesForDate(dateStr, routines);
+
+            renderRoutines();
+            renderCalendar();
+        }
+
+        function togglePresetMenu() {
+            const menu = document.getElementById('presetMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function resetTodayRoutines() {
+            const dateStr = formatDateKey(selectedDate);
+            const defaultList = DEFAULT_ROUTINES.map(title => ({
+                id: 'rt_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                title: title,
+                completed: false
+            }));
+
+            saveRoutinesForDate(dateStr, defaultList);
+            renderRoutines();
+            renderCalendar();
+        }
+
+        // Celebratory Confetti Animation
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 50,
+                    spread: 60,
+                    origin: { y: 0.7 },
+                    colors: ['#f04374', '#fcc2d0', '#ff758f', '#ffe4e9', '#ffd166']
+                });
+            }
+        }
+    </script>
+</body>
+</html>
